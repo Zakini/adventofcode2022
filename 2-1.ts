@@ -20,24 +20,15 @@ const parsedInput = input.trim()
 
 const score = (opponent: RpsMove, you: RpsMove) => {
   const moveScoreMap = { rock: 1, paper: 2, scissors: 3 }
+  const winningResponseMap: Record<RpsMove, RpsMove> = { rock: 'paper', paper: 'scissors', scissors: 'rock' }
 
   let resultScore
 
   if (opponent === you) {
-    // draw
     resultScore = 3
   } else {
-    if (
-      (opponent === 'rock' && you ==='scissors')
-        || (opponent === 'paper' && you === 'rock')
-        || (opponent === 'scissors' && you === 'paper')
-    ) {
-      // lose
-      resultScore = 0
-    } else {
-      // win
-      resultScore = 6
-    }
+    if (winningResponseMap[opponent] === you) resultScore = 6
+    else resultScore = 0
   }
 
   return resultScore + moveScoreMap[you]
