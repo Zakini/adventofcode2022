@@ -16,4 +16,10 @@ const wholyContainedPairs = pairedRanges.filter(([
   { min: minB, max: maxB },
 ]) => (minA <= minB && maxB <= maxA) || (minB <= minA && maxA <= maxB))
 
+const overlappingPairs = pairedRanges.filter(([
+  { min: minA, max: maxA },
+  { min: minB, max: maxB },
+]) => (minA <= minB && minB <= maxA) || (minA <= maxB && maxB <= maxA) || (minB <= minA && minA <= maxB))
+
 console.log(wholyContainedPairs.length)
+console.log(overlappingPairs.length)
