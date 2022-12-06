@@ -6,9 +6,14 @@ import { loadInput } from './utils.ts'
 const input = await loadInput(6)
 const transmission = input.trim()
 
-let n
-for (n = 4; n <= transmission.length; n++) {
-  if (distinct(transmission.slice(n - 4, n).split('')).length === 4) break
+
+const findFirstRunOfUniqueChars = (length: number) => {
+  for (let n = length; n <= transmission.length; n++) {
+    if (distinct(transmission.slice(n - length, n).split('')).length === length) return n
+  }
+
+  throw new Error(`Could not find ${length} long run of unique chars`)
 }
 
-console.log(n)
+console.log(findFirstRunOfUniqueChars(4))
+console.log(findFirstRunOfUniqueChars(14))
