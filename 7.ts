@@ -99,19 +99,31 @@ const calculateDirectorySize = (node: FileSystemNode) => {
 
 calculateDirectorySize(filesystem)
 
-// Calculate answer
+// Calculate answers
 const flattenFilesystem = ({ path, type, size, childNodes }: FileSystemNode): FileInfo[] => {
   const info: FileInfo = { path, type, size }
   return [info, ...childNodes.flatMap(flattenFilesystem)]
 }
 const flatFilesystem = flattenFilesystem(filesystem)
-
-const answer = flatFilesystem.filter(({ type }) => type === 'dir')
+const directorySizes = flatFilesystem.filter(({ type }) => type === 'dir')
   .map(({ size }) => {
     if (size === null) throw new Error('wut')
     return size
   })
-  .filter(size => size <= 100_000)
+
+// Part one
+const answerPartOne = directorySizes.filter(size => size <= 100_000)
   .reduce((a, b) => a + b)
 
-console.log(answer)
+// Part two
+const totalSpace = 70_000_000
+const requiredSpace = 30_000_000
+if (!filesystem.size) throw new Error('wut')
+const freeSpace = totalSpace - filesystem.size
+const spaceToClear = requiredSpace - freeSpace
+
+const answerPartTwo = directorySizes.filter(size => size >= spaceToClear)
+  .sort((a, b) => a - b)[0]
+
+console.log(answerPartOne)
+console.log(answerPartTwo)
