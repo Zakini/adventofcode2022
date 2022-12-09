@@ -32,25 +32,31 @@ const moves: Move[] = input.trim()
 // Move!
 const adjacent = (a: Position, b: Position) => Math.abs(a.x - b.x) <=1 && Math.abs(a.y - b.y) <= 1
 
-const head: Position = { x: 0, y: 0 }
-const tail: Position = { x: 0, y: 0 }
-const tailHistory: Position[] = []
+const simulateRope = (length: number) => {
+  const rope = Array(length).fill(null).map(() => ({ x: 0, y: 0 }))
+  const tailHistory: Position[] = []
 
-for (const move of moves) {
-  for (let i = 0; i < move.distance; i++) {
-    head[move.axis] += move.change === 'increase' ? 1 : -1
+  for (const move of moves) {
+    for (let i = 0; i < move.distance; i++) {
+      rope[0][move.axis] += move.change === 'increase' ? 1 : -1
 
-    if (adjacent(head, tail)) continue
+      for (let j = 1; j < rope.length; j++) {
+        if (adjacent(rope[j - 1], rope[j])) continue
 
-    // Move tail to follow head
-    if (head.y !== tail.y) tail.y += head.y > tail.y ? 1 : -1
-    if (head.x !== tail.x) tail.x += head.x > tail.x ? 1 : -1
+        // Move tail to follow head
+        if (rope[j - 1].y !== rope[j].y) rope[j].y += rope[j - 1].y > rope[j].y ? 1 : -1
+        if (rope[j - 1].x !== rope[j].x) rope[j].x += rope[j - 1].x > rope[j].x ? 1 : -1
+      }
 
-    tailHistory.push({ ...tail })
+      tailHistory.push({ ...rope[rope.length - 1] })
+    }
   }
+
+  const uniqueTailHistory = distinct(tailHistory.map(t => JSON.stringify(t)))
+    .map(s => JSON.parse(s))
+
+  console.log(uniqueTailHistory.length)
 }
 
-const uniqueTailHistory = distinct(tailHistory.map(t => JSON.stringify(t)))
-  .map(s => JSON.parse(s))
-
-console.log(uniqueTailHistory.length)
+simulateRope(2)
+simulateRope(10)
