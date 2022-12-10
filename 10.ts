@@ -1,6 +1,7 @@
 #!/usr/bin/env -S deno run --allow-read=input
 
 import { loadInput } from './utils.ts'
+import { chunk } from 'std/collections/chunk.ts'
 
 type Instruction = { name: 'noop', cycles: 1 }
   | { name: 'addx', argument: number, cycles: 2 }
@@ -57,10 +58,24 @@ const cpu = new CPU()
 cpu.loadProgram(program)
 
 const signalStrengths: number[] = []
+const renderBuffer: boolean[] = []
+
 for (const x of cpu.execute()) {
   if ((cpu.cycle - 20) % 40 === 0) {
     signalStrengths.push(cpu.cycle * x)
   }
+
+  const spriteCentre = (cpu.cycle - 1) % 40
+  const spriteMin = spriteCentre - 1
+  const spriteMax = spriteCentre + 1
+
+  renderBuffer.push(spriteMin <= x && x <= spriteMax)
 }
 
 console.log(signalStrengths.reduce((a, b) => a + b))
+
+console.log(
+  chunk(renderBuffer, 40)
+    .map(l => l.map(v => v ? '#' : '.').join(''))
+    .join('\n')
+)
