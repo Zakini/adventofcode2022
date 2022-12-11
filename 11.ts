@@ -15,6 +15,8 @@ class Monkey {
   #inspect: Inspect
   #decideDivisor: number
   #targets: TargetMap
+  #isStressingMeOut = false
+  #maxItemValue = Infinity
 
   constructor(items: number[], inspect: Inspect, decideDivisor: number, targets: TargetMap) {
     this.#items = items
@@ -26,8 +28,15 @@ class Monkey {
   *doMonkeyBusiness() {
     while (this.#items.length > 0) {
       const item = this.#items.shift() as number
-      const newItem = Math.floor(this.#inspect(item) / 3)
+      const itemAfterInspection = this.#inspect(item) % this.#maxItemValue
+      const newItem = this.#isStressingMeOut
+        ? itemAfterInspection
+        : Math.floor(itemAfterInspection / 3)
+
+      if (!isFinite(newItem)) throw new Error('Item reached infinity 🚀')
+
       const targetKey = newItem % this.#decideDivisor === 0 ? 'true' : 'false'
+
       yield { target: this.#targets[targetKey], item: newItem }
     }
   }
@@ -35,68 +44,95 @@ class Monkey {
   throwTo(item: number) {
     this.#items.push(item)
   }
+
+  loseChill() {
+    this.#isStressingMeOut = true
+    return this
+  }
+
+  get decideDivisor() {
+    return this.#decideDivisor
+  }
+
+  set maxItemValue(value: number) {
+    this.#maxItemValue = value
+  }
 }
 
 const input = await loadInput(11)
 
-const resolveOld = (old: number, v: OldNumber) => v === 'old' ? old : v
-const operationMap: Record<OpCode, Operation> = {
-  '+': (old: number, a: OldNumber, b: OldNumber) => resolveOld(old, a) + resolveOld(old, b),
-  '*': (old: number, a: OldNumber, b: OldNumber) => resolveOld(old, a) * resolveOld(old, b),
+const monkeyFactory = (input: string) => {
+  const resolveOld = (old: number, v: OldNumber) => v === 'old' ? old : v
+  const operationMap: Record<OpCode, Operation> = {
+    '+': (old: number, a: OldNumber, b: OldNumber) => resolveOld(old, a) + resolveOld(old, b),
+    '*': (old: number, a: OldNumber, b: OldNumber) => resolveOld(old, a) * resolveOld(old, b),
+  }
+
+  const monkeys = input.trim()
+    .split('Monkey')
+    .filter(m => m !== '')
+    .map(
+      m => m.split('\n')
+        .map(l => l.trim())
+        .filter(l => l !== '')
+    )
+    .map(([idLine, itemsLine, inspectLine, decideLine, trueTargetLine, falseTargetLine], i) => {
+      const id = +idLine.split(':')[0]
+
+      if (id !== i) throw new Error(`Got monkey ${id} out of order`)
+
+      const items = itemsLine.split('Starting items: ')[1]
+        .split(', ')
+        .map(v => +v)
+      const [inspectArg1, inspectOp, inspectArg2] = inspectLine.split('new = ')[1]
+        .split(' ')
+        .map(t => isNaN(+t) ? t : +t)
+
+      if (!isOldNumber(inspectArg1)) {
+        throw new Error(`Unexpected first argument in monkey ${id}'s inspect function: ${inspectArg1}`)
+      }
+      if (!isOldNumber(inspectArg2)) {
+        throw new Error(`Unexpected second argument in monkey ${id}'s inspect function: ${inspectArg2}`)
+      }
+      if (!(inspectOp in operationMap)) {
+        throw new Error(`Unrecognised operation in monkey ${id}'s inspect function: ${inspectOp}`)
+      }
+
+      // why tf is 'as' necessary here typescript 🙃
+      const inspect: Inspect = item => operationMap[inspectOp as OpCode](item, inspectArg1, inspectArg2)
+
+      const decideDivisor = +decideLine.split('divisible by ')[1]
+      const targets: TargetMap = {
+        'true': +trueTargetLine.split('monkey ')[1],
+        'false': +falseTargetLine.split('monkey ')[1],
+      }
+
+      return new Monkey(items, inspect, decideDivisor, targets)
+    })
+
+  const maxItemValue = monkeys.map(m => m.decideDivisor).reduce((a, b) => a * b)
+  monkeys.forEach(m => { m.maxItemValue = maxItemValue })
+
+  return monkeys
 }
 
-const monkeys = input.trim()
-  .split('Monkey')
-  .filter(m => m !== '')
-  .map(
-    m => m.split('\n')
-      .map(l => l.trim())
-      .filter(l => l !== '')
-  )
-  .map(([idLine, itemsLine, inspectLine, decideLine, trueTargetLine, falseTargetLine], i) => {
-    const id = +idLine.split(':')[0]
 
-    if (id !== i) throw new Error(`Got monkey ${id} out of order`)
+const chaseForRounds = (monkeys: Monkey[], rounds: number) => {
+  const activityPerMonkey = Object.fromEntries(Array.from(Array(monkeys.length)).map((_, i) => [i, 0]))
 
-    const items = itemsLine.split('Starting items: ')[1]
-      .split(', ')
-      .map(v => +v)
-    const [inspectArg1, inspectOp, inspectArg2] = inspectLine.split('new = ')[1]
-      .split(' ')
-      .map(t => isNaN(+t) ? t : +t)
-
-    if (!isOldNumber(inspectArg1)) {
-      throw new Error(`Unexpected first argument in monkey ${id}'s inspect function: ${inspectArg1}`)
-    }
-    if (!isOldNumber(inspectArg2)) {
-      throw new Error(`Unexpected second argument in monkey ${id}'s inspect function: ${inspectArg2}`)
-    }
-    if (!(inspectOp in operationMap)) {
-      throw new Error(`Unrecognised operation in monkey ${id}'s inspect function: ${inspectOp}`)
-    }
-
-    // why tf is 'as' necessary here typescript 🙃
-    const inspect: Inspect = item => operationMap[inspectOp as OpCode](item, inspectArg1, inspectArg2)
-
-    const decideDivisor = +decideLine.split('divisible by ')[1]
-    const targets: TargetMap = {
-      'true': +trueTargetLine.split('monkey ')[1],
-      'false': +falseTargetLine.split('monkey ')[1],
-    }
-
-    return new Monkey(items, inspect, decideDivisor, targets)
-  })
-
-const activityPerMonkey = Object.fromEntries(Array.from(Array(monkeys.length)).map((_, i) => [i, 0]))
-for (let round = 0; round < 20; round++) {
-  for (let id = 0; id < monkeys.length; id++) {
-    for (const { target, item } of monkeys[id].doMonkeyBusiness()) {
-      monkeys[target].throwTo(item)
-      activityPerMonkey[id]++
+  for (let round = 1; round <= rounds; round++) {
+    for (let id = 0; id < monkeys.length; id++) {
+      for (const { target, item } of monkeys[id].doMonkeyBusiness()) {
+        monkeys[target].throwTo(item)
+        activityPerMonkey[id]++
+      }
     }
   }
+
+  const [highestActivity, secondHighestActivity] = Object.values(activityPerMonkey).sort((a, b) => b - a)
+
+  console.log(highestActivity * secondHighestActivity)
 }
 
-const [highestActivity, secondHighestActivity] = Object.values(activityPerMonkey).sort((a, b) => b - a)
-
-console.log(highestActivity * secondHighestActivity)
+chaseForRounds(monkeyFactory(input), 20)
+chaseForRounds(monkeyFactory(input).map(m => m.loseChill()), 10_000)
