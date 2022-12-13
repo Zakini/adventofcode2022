@@ -28,7 +28,7 @@ const parse = (input: string) => {
   return output
 }
 
-const pairs = input.trim()
+const pairs: Item[][] = input.trim()
   .split('\n\n')
   .map(p => p.split('\n').map(parse))
 
@@ -59,3 +59,20 @@ const inOrderPairIndices = pairs.map(([a, b], i) => areInOrder(a, b) ? i + 1 : n
   .filter((v): v is number => v !== null)
 
 console.log(inOrderPairIndices.reduce((a, b) => a + b))
+
+const packets = pairs.flat(1)
+// Add divider packets
+packets.push([[2]])
+packets.push([[6]])
+
+const sortedPackets = packets.sort((a, b) => {
+  const inOrder = areInOrder(a, b)
+  if (inOrder === null) return 0
+  return inOrder ? -1 : 1
+})
+
+const dividerIndices = sortedPackets.map(v => JSON.stringify(v))
+  .map((v, i) => v === '[[2]]' || v === '[[6]]' ? i + 1 : null)
+  .filter((v): v is number => v !== null)
+
+console.log(dividerIndices[0] * dividerIndices[1])
